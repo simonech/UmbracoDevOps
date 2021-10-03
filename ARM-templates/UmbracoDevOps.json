@@ -1,0 +1,507 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "applicationName": {
+            "type": "string",
+            "defaultValue": "UmbracoDevOps",
+            "minLength": 3,
+            "metadata": {
+                "description": "Application Name"
+            }
+        },
+        "envName": {
+            "type": "string",
+            "defaultValue": "DEV",
+            "allowedValues": [
+                "DEV",
+                "TST",
+                "STG",
+                "PRD"
+            ],
+            "metadata": {
+                "description": "Kind of environment"
+            }
+        },
+        "location": {
+            "type": "string",
+            "defaultValue": "westeurope",
+            "allowedValues": [
+                "westeurope",
+                "northeurope"
+            ],
+            "metadata": {
+                "description": "Location for all resources"
+            }
+        },
+        "storageSKU": {
+            "type": "string",
+            "defaultValue": "Standard_LRS",
+            "allowedValues": [
+                "Standard_LRS",
+                "Standard_GRS",
+                "Standard_RAGRS",
+                "Standard_ZRS",
+                "Premium_LRS",
+                "Premium_ZRS",
+                "Standard_GZRS",
+                "Standard_RAGZRS"
+            ],
+            "metadata": {
+                "description": "Storage Account type"
+            }
+        },
+        "dbAdministratorLogin": {
+            "type": "string",
+            "metadata": {
+                "description": "SQL Azure DB administrator user login"
+            }
+        },
+        "dbAdministratorLoginPassword": {
+            "type": "securestring",
+            "metadata": {
+                "description": "Database admin user password"
+            }
+        },
+        "connectionStringName": {
+            "type": "string",
+            "defaultValue": "umbracoDbDSN",
+            "metadata": {
+                "description": "Name of connection string"
+            }
+        },
+        "dbSKU": {
+            "type": "string",
+            "defaultValue": "S0",
+            "allowedValues": [
+                "Basic",
+                "S0",
+                "S1",
+                "S2",
+                "S3",
+                "S4",
+                "S5",
+                "P1",
+                "P2"
+            ],
+            "metadata": {
+                "description": "DB Account type"
+            }
+        },
+        "webAppSKU": {
+            "type": "string",
+            "defaultValue": "B1",
+            "allowedValues": [
+                "B1",
+                "B2",
+                "B3",
+                "S1",
+                "S2",
+                "S3",
+                "P1V3",
+                "P2V3",
+                "P3V3"
+            ],
+            "metadata": {
+                "description": "Describes plan's pricing tier for the frontend"
+            }
+        },
+        "webAppBOSKU": {
+            "type": "string",
+            "defaultValue": "B1",
+            "allowedValues": [
+                "B1",
+                "B2",
+                "B3",
+                "S1",
+                "S2",
+                "S3",
+                "P1V3",
+                "P2V3",
+                "P3V3"
+            ],
+            "metadata": {
+                "description": "Describes plan's pricing tier for backend"
+            }
+        },
+        "webAppSKUCapacity": {
+            "type": "int",
+            "defaultValue": 1,
+            "minValue": 1,
+            "maxValue": 3,
+            "metadata": {
+                "description": "Describes plan's instance count of frontend"
+            }
+        },
+        "webAppBOSKUCapacity": {
+            "type": "int",
+            "defaultValue": 1,
+            "minValue": 1,
+            "maxValue": 3,
+            "metadata": {
+                "description": "Describes plan's instance count of backend"
+            }
+        },
+        "mediaContainerName": {
+            "type": "string",
+            "defaultValue": "media",
+            "metadata": {
+                "description": "Name of the blob container for storing media files"
+            }
+        },
+        "shareHostPlan": {
+            "type": "bool",
+            "defaultValue": false,
+            "metadata": {
+                "description": "Frontend and backend share the same hosting plan (the frontend plan)"
+            }
+        },
+        "umbracoVersion": {
+            "type": "string",
+            "defaultValue": "",
+            "metadata": {
+                "description": "Umbraco version"
+            }
+        },
+        "searchSKU": {
+            "type": "string",
+            "defaultValue": "basic",
+            "allowedValues": [
+                "free",
+                "basic",
+                "standard",
+                "standard2",
+                "standard3",
+                "storage_optimized_l1",
+                "storage_optimized_l2"
+            ],
+            "metadata": {
+                "description": "The pricing tier of the search service you want to create (for example, basic or standard)."
+            }
+        }
+    },
+    "variables": {
+        "storageName": "[concat('st',toLower(parameters('applicationName')),toLower(parameters('envName')))]",
+        "dbServerName": "[concat('sql-',parameters('applicationName'),'-',parameters('envName'))]",
+        "dbName": "[concat('sqldb-umbraco',parameters('applicationName'),'-',parameters('envName'))]",
+        "hostingPlanName": "[concat('plan-',parameters('applicationName'),'-',parameters('envName'))]",
+        "hostingPlanBOName": "[concat('plan-',parameters('applicationName'),'BO-',parameters('envName'))]",
+        "webAppFEName": "[concat('app-',parameters('applicationName'),'-',parameters('envName'))]",
+        "webAppBOName": "[concat('app-',parameters('applicationName'),'BO-',parameters('envName'))]",
+        "appInsight": "[concat('appi-',parameters('applicationName'),'-',parameters('envName'))]",
+        "searchServiceName": "[toLower(concat('srch-',parameters('applicationName')))]",        
+        "searchServiceEnvName": "[toLower(concat(variables('searchServiceName'),'-',parameters('envName')))]",
+        "connectionString": "[concat('Server=tcp:', variables('dbServerName'), '.database.windows.net,1433;Initial Catalog=', variables('dbName'), ';Persist Security Info=False;User ID=', parameters('dbAdministratorLogin'), ';Password=', parameters('dbAdministratorLoginPassword'), ';MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;')]",
+        "resourceTags": {
+            "Environment": "[parameters('envName')]",
+            "Project": "[parameters('applicationName')]"
+        }
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Storage/storageAccounts",
+            "apiVersion": "2019-06-01",
+            "name": "[variables('storageName')]",
+            "location": "[parameters('location')]",
+            "sku": {
+                "name": "[parameters('storageSKU')]"
+            },
+            "kind": "StorageV2",
+            "tags": "[variables('resourceTags')]",
+            "properties": {
+                "supportsHttpsTrafficOnly": false
+            },
+            "resources": [
+                {
+                    "type": "blobServices/containers",
+                    "apiVersion": "2019-06-01",
+                    "name": "[concat('default/', parameters('mediaContainerName'))]",
+                    "dependsOn": [
+                        "[variables('storageName')]"
+                    ],
+                    "properties": {
+                        "publicAccess": "Container"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "[variables('dbServerName')]",
+            "type": "Microsoft.Sql/servers",
+            "location": "[parameters('location')]",
+            "apiVersion": "2019-06-01-preview",
+            "tags": "[variables('resourceTags')]",
+            "properties": {
+                "administratorLogin": "[parameters('dbAdministratorLogin')]",
+                "administratorLoginPassword": "[parameters('dbAdministratorLoginPassword')]"
+            },
+            "resources": [
+                {
+                    "type": "databases",
+                    "name": "[variables('dbName')]",
+                    "location": "[parameters('location')]",
+                    "apiVersion": "2019-06-01-preview",
+                    "dependsOn": [
+                        "[variables('dbServerName')]"
+                    ],
+                    "tags": "[variables('resourceTags')]",
+                    "sku": {
+                        "name": "[parameters('dbSKU')]"
+                    },
+                    "properties": {}
+                },
+                {
+                    "type": "firewallRules",
+                    "apiVersion": "2015-05-01-preview",
+                    "name": "AllowAllWindowsAzureIps",
+                    "dependsOn": [
+                        "[resourceId('Microsoft.Sql/servers/', variables('dbServerName'))]"
+                    ],
+                    "tags": "[variables('resourceTags')]",
+                    "properties": {
+                        "startIpAddress": "0.0.0.0",
+                        "endIpAddress": "0.0.0.0"
+                    }
+                }
+            ]
+        },
+        {
+            "type": "Microsoft.Search/searchServices",
+            "apiVersion": "2020-08-01",
+            "location": "[parameters('location')]",
+            "name": "[variables('searchServiceEnvName')]",
+            "sku": {
+                "name": "[toLower(parameters('searchSKU'))]"
+            }
+        },
+        {
+            "apiVersion": "2018-02-01",
+            "name": "[variables('hostingPlanName')]",
+            "type": "Microsoft.Web/serverfarms",
+            "location": "[parameters('location')]",
+            "tags": "[variables('resourceTags')]",
+            "properties": {
+                "name": "[variables('hostingPlanName')]"
+            },
+            "sku": {
+                "name": "[parameters('webAppSKU')]",
+                "capacity": "[parameters('webAppSKUCapacity')]"
+            }
+        },
+        {
+            "condition": "[not(parameters('shareHostPlan'))]",
+            "apiVersion": "2018-02-01",
+            "name": "[variables('hostingPlanBOName')]",
+            "type": "Microsoft.Web/serverfarms",
+            "location": "[parameters('location')]",
+            "tags": "[variables('resourceTags')]",
+            "properties": {
+                "name": "[variables('hostingPlanBOName')]"
+            },
+            "sku": {
+                "name": "[parameters('webAppBOSKU')]",
+                "capacity": "[parameters('webAppBOSKUCapacity')]"
+            }
+        },
+        {
+            "type": "Microsoft.Web/sites",
+            "apiVersion": "2018-11-01",
+            "name": "[variables('webAppFEName')]",
+            "location": "[parameters('location')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', variables('storageName'))]",
+                "[resourceId('Microsoft.Insights/components/', variables('appInsight'))]",
+                "[resourceId('Microsoft.Web/serverfarms/', variables('hostingPlanName'))]",
+                "[resourceId('Microsoft.Sql/servers/databases/', variables('dbServerName'), variables('dbName'))]",
+                "[resourceId('Microsoft.Search/searchServices/', variables('searchServiceEnvName'))]"
+            ],
+            "tags": "[variables('resourceTags')]",
+            "properties": {
+                "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]",
+                "siteConfig": {
+                    "connectionStrings": [
+                        {
+                            "name": "[parameters('connectionStringName')]",
+                            "connectionString": "[variables('connectionString')]",
+                            "type": "SQLAzure"
+                        }
+                    ],
+                    "appSettings": [
+                        {
+                            "name": "My.Core.LoadBalancing.ServerRole",
+                            "value": "Replica"
+                        },
+                        {
+                            "name": "Umbraco.Examine.LuceneDirectoryFactory",
+                            "value": "Examine.LuceneEngine.Directories.TempEnvDirectoryFactory, Examine"
+                        },
+                        {
+                            "name": "Umbraco.Core.ConfigurationStatus",
+                            "value": "[parameters('umbracoVersion')]"
+                        },
+                        {
+                            "name": "Umbraco.Core.MainDom.Lock",
+                            "value": "SqlMainDomLock"
+                        },
+                        {
+                            "name": "Umbraco.Core.LocalTempStorage",
+                            "value": "EnvironmentTemp"
+                        },
+                        {
+                            "name": "My.Azure.AI.InstrumentationConnectionString",
+                            "value": "[reference(resourceId('microsoft.insights/components/', variables('appInsight')), '2020-02-02').ConnectionString]"
+                        },
+                        {
+                            "name": "My.Azure.AI.Enabled",
+                            "value": "true"
+                        },
+                        {
+                            "name": "AzureBlobFileSystem.RootUrl:media",
+                            "value": "[reference(variables('storageName')).primaryEndpoints.blob]"
+                        },
+                        {
+                            "name": "AzureBlobFileSystem.ConnectionString:media",
+                            "value": "[concat('DefaultEndpointsProtocol=https;AccountName=',variables('storageName'),';AccountKey=',listKeys(variables('storageName'), '2019-04-01').keys[0].value,';EndpointSuffix=core.windows.net')]"
+                        },
+                        {
+                            "name": "AzureBlobFileSystem.ContainerName:media",
+                            "value": "[parameters('mediaContainerName')]"
+                        },
+                        {
+                            "name": "ExamineX.AzureSearchServiceName",
+                            "value": "[variables('searchServiceName')]"
+                        },
+                        {
+                            "name": "ExamineX.AzureSearchKey",
+                            "value": "[listAdminKeys(variables('searchServiceEnvName'), '2020-08-01').primaryKey]"
+                        },
+                        {
+                            "name": "ExamineX.EnvironmentName",
+                            "value": "[toLower(concat(parameters('envName')))]"
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Web/sites",
+            "apiVersion": "2018-11-01",
+            "name": "[variables('webAppBOName')]",
+            "location": "[parameters('location')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', variables('storageName'))]",
+                "[resourceId('Microsoft.Insights/components/', variables('appInsight'))]",
+                "[resourceId('Microsoft.Web/serverfarms/', if(parameters('shareHostPlan'),variables('hostingPlanName'),variables('hostingPlanBOName')))]",
+                "[resourceId('Microsoft.Sql/servers/databases/', variables('dbServerName'), variables('dbName'))]",
+                "[resourceId('Microsoft.Search/searchServices/', variables('searchServiceEnvName'))]"
+            ],
+            "tags": "[variables('resourceTags')]",
+            "properties": {
+                "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', if(parameters('shareHostPlan'),variables('hostingPlanName'),variables('hostingPlanBOName')))]",
+                "siteConfig": {
+                    "connectionStrings": [
+                        {
+                            "name": "[parameters('connectionStringName')]",
+                            "connectionString": "[variables('connectionString')]",
+                            "type": "SQLAzure"
+                        }
+                    ],
+                    "appSettings": [
+                        {
+                            "name": "My.Core.LoadBalancing.ServerRole",
+                            "value": "Master"
+                        },
+                        {
+                            "name": "Umbraco.Examine.LuceneDirectoryFactory",
+                            "value": "Examine.LuceneEngine.Directories.SyncTempEnvDirectoryFactory, Examine"
+                        },
+                        {
+                            "name": "Umbraco.Core.UseHttps",
+                            "value": "true"
+                        },
+                        {
+                            "name": "Umbraco.Core.ConfigurationStatus",
+                            "value": "[parameters('umbracoVersion')]"
+                        },
+                        {
+                            "name": "Umbraco.Core.MainDom.Lock",
+                            "value": "SqlMainDomLock"
+                        },
+                        {
+                            "name": "Umbraco.Core.LocalTempStorage",
+                            "value": "EnvironmentTemp"
+                        },
+                        {
+                            "name": "My.Azure.AI.InstrumentationKey",
+                            "value": "[reference(resourceId('microsoft.insights/components/', variables('appInsight')), '2020-02-02').ConnectionString]"
+                        },
+                        {
+                            "name": "My.Azure.AI.Enabled",
+                            "value": "true"
+                        },
+                        {
+                            "name": "AzureBlobFileSystem.RootUrl:media",
+                            "value": "[reference(variables('storageName')).primaryEndpoints.blob]"
+                        },
+                        {
+                            "name": "AzureBlobFileSystem.ConnectionString:media",
+                            "value": "[concat('DefaultEndpointsProtocol=https;AccountName=',variables('storageName'),';AccountKey=',listKeys(variables('storageName'), '2019-04-01').keys[0].value,';EndpointSuffix=core.windows.net')]"
+                        },
+                        {
+                            "name": "AzureBlobFileSystem.ContainerName:media",
+                            "value": "[parameters('mediaContainerName')]"
+                        },
+                        {
+                            "name": "ExamineX.AzureSearchServiceName",
+                            "value": "[variables('searchServiceName')]"
+                        },
+                        {
+                            "name": "ExamineX.AzureSearchKey",
+                            "value": "[listAdminKeys(variables('searchServiceEnvName'), '2020-08-01').primaryKey]"
+                        },
+                        {
+                            "name": "ExamineX.EnvironmentName",
+                            "value": "[toLower(concat(parameters('envName')))]"
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "apiVersion": "2018-05-01-preview",
+            "name": "[variables('appInsight')]",
+            "type": "microsoft.insights/components",
+            "location": "[parameters('location')]",
+            "tags": "[variables('resourceTags')]",
+            "properties": {
+                "applicationId": "[variables('appInsight')]"
+            }
+        }
+    ],
+    "outputs": {
+        "storageEndpoint": {
+            "type": "string",
+            "value": "[reference(variables('storageName')).primaryEndpoints.blob]"
+        },
+        "websiteUrl": {
+            "type": "string",
+            "value": "[reference(variables('webAppFEName')).defaultHostName]"
+        },
+        "websiteBOUrl": {
+            "type": "string",
+            "value": "[reference(variables('webAppBOName')).defaultHostName]"
+        },
+        "connectionString": {
+            "type": "string",
+            "value": "[variables('connectionString')]"
+        },
+        "publishProfile": {
+            "type": "object",
+            "value": "[list(concat('Microsoft.Web/sites/', variables('webAppFEName') ,'/config/publishingcredentials'), '2019-08-01')]"
+        },
+        "publishProfileBO": {
+            "type": "object",
+            "value": "[list(concat('Microsoft.Web/sites/', variables('webAppBOName') ,'/config/publishingcredentials'), '2019-08-01')]"
+        }
+    }
+}

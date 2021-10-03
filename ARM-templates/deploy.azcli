@@ -1,0 +1,13 @@
+
+# Deploy to DEV
+
+az webapp config appsettings list \
+  --name app-UmbracoDevOpsBO-DEV \
+  --resource-group RG-UmbracoDevOps-Dev | jq '.[] | select(.name=="Umbraco.Core.ConfigurationStatus") | .value'
+
+az deployment group create \
+  --name InitialDeployment \
+  --resource-group RG-UmbracoDevOps-Dev \
+  --template-file ./UmbracoDevOps.json \
+  --parameters ./UmbracoDevOps.parameters.dev.json \
+  --query properties.outputs

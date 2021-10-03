@@ -1,0 +1,27 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "envName": {
+      "value": "DEV"
+    },
+    "location": {
+      "value": "westeurope"
+    },
+    "dbAdministratorLogin": {
+      "value": "umbracodevops-admin"
+    },
+    "dbAdministratorLoginPassword": {
+      "value": "xxxxxxxxxxxxxxx"
+    },
+    "shareHostPlan": {
+      "value": true
+    },
+    "webAppSKU": {
+      "value": "B2"
+    },
+    "dbSKU": {
+      "value": "S3"
+    }
+  }
+}
