@@ -23,7 +23,7 @@ env:
   ARM_TEMPLATE_FILE_PATH: ./ARM-templates/UmbracoDevOps.json
   ARM_TEMPLATE_PARAMS_FILE_PATH: ./ARM-templates/UmbracoDevOps.parameters.dev.json
   
-  PACKAGE_FILE_PATH: ./src/UmbracoDevOps.Web/umbracodevops.zip
+  PACKAGE_FILE_PATH: ./src/UmbracoDevOps.Web/
   
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
@@ -49,7 +49,7 @@ jobs:
         working-directory: ${{env.GITHUB_WORKSPACE}}
         # Add additional options to the MSBuild command line here (like platform or verbosity level).
         # See https://docs.microsoft.com/visualstudio/msbuild/msbuild-command-line-reference
-        run: msbuild /T:Package /P:PackageLocation=${{env.PACKAGE_NAME}} /m /p:Configuration=${{env.BUILD_CONFIGURATION}} ${{env.WEBSITEPROJ_FILE_PATH}}
+        run: msbuild /m /p:Configuration=${{env.BUILD_CONFIGURATION}} ${{env.WEBSITEPROJ_FILE_PATH}}
         
       - name: Azure login
         uses: Azure/login@v1.4.0
