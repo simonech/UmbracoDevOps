@@ -483,6 +483,14 @@
             "type": "string",
             "value": "[reference(variables('storageName')).primaryEndpoints.blob]"
         },
+        "webAppFEName": {
+            "type": "string",
+            "value": "[variables('webAppFEName')]"
+        },
+        "webAppBOName": {
+            "type": "string",
+            "value": "[variables('webAppBOName')]"
+        },
         "websiteUrl": {
             "type": "string",
             "value": "[reference(variables('webAppFEName')).defaultHostName]"
