@@ -69,7 +69,6 @@ jobs:
       - name: Deploy frontend webiste
         uses: azure/webapps-deploy@v2
         with: 
-          app-name: ${{ steps.deploy.outputs.webAppFEName }} # Replace with your app name
-          publish-profile: ${{ steps.deploy.outputs.publishProfile  }}
+          app-name: ${{ steps.deploy.outputs.webAppFEName }}
           package: ${{env.PACKAGE_FILE_PATH}}
 
