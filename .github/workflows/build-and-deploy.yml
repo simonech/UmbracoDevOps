@@ -23,6 +23,8 @@ env:
   ARM_TEMPLATE_FILE_PATH: ./ARM-templates/UmbracoDevOps.json
   ARM_TEMPLATE_PARAMS_FILE_PATH: ./ARM-templates/UmbracoDevOps.parameters.dev.json
   
+  PACKAGE_FILE_PATH: ./src/UmbracoDevOps.Web/umbracodevops.zip
+  
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
@@ -64,6 +66,10 @@ jobs:
           parameters: ${{env.ARM_TEMPLATE_PARAMS_FILE_PATH}} dbAdministratorLoginPassword=${{ secrets.SQL_SERVER }}
           deploymentName: deployment-from-actions
           
-      - run: echo ${{ steps.deploy.outputs.publishProfile }}
-      - run: echo ${{ steps.deploy.outputs.publishProfileBO }}
+      - name: Deploy frontend webiste
+        uses: azure/webapps-deploy@v2
+        with: 
+          app-name: ${{ steps.deploy.outputs.webAppFEName }} # Replace with your app name
+          publish-profile: ${{ steps.deploy.outputs.publishProfile  }}
+          package: ${{env.PACKAGE_FILE_PATH}}
 
