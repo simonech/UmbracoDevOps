@@ -15,15 +15,12 @@ env:
   # Path to the solution file relative to the root of the project.
   SOLUTION_FILE_PATH: ./src/UmbracoDevOps.sln
   WEBSITEPROJ_FILE_PATH: ./src/UmbracoDevOps.Web/UmbracoDevOps.Web.csproj
-
   BUILD_CONFIGURATION: Release
-  PACKAGE_NAME: ./umbracodevops.zip
+  WEBSITEPROJ_PATH: ./src/UmbracoDevOps.Web/
   
   RESOURCE_GROUP: rg-umbracodevops
   ARM_TEMPLATE_FILE_PATH: ./ARM-templates/UmbracoDevOps.json
   ARM_TEMPLATE_PARAMS_FILE_PATH: ./ARM-templates/UmbracoDevOps.parameters.dev.json
-  
-  PACKAGE_FILE_PATH: ./src/UmbracoDevOps.Web/
   
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
@@ -70,5 +67,11 @@ jobs:
         uses: azure/webapps-deploy@v2
         with: 
           app-name: ${{ steps.deploy.outputs.webAppFEName }}
-          package: ${{env.PACKAGE_FILE_PATH}}
+          package: ${{env.WEBSITEPROJ_PATH}}
+          
+      - name: Deploy backend webiste
+        uses: azure/webapps-deploy@v2
+        with: 
+          app-name: ${{ steps.deploy.outputs.webAppBOName }}
+          package: ${{env.WEBSITEPROJ_PATH}}
 
