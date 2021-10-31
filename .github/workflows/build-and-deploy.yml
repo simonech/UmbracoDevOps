@@ -61,7 +61,7 @@ jobs:
         with:
           resourceGroupName: ${{env.RESOURCE_GROUP}}
           template: ${{env.ARM_TEMPLATE_FILE_PATH}}
-          parameters: ${{env.ARM_TEMPLATE_PARAMS_FILE_PATH}}
+          parameters: ${{env.ARM_TEMPLATE_PARAMS_FILE_PATH}} dbAdministratorLoginPassword=${{ secrets.SQL_SERVER }}
           deploymentName: deployment-from-actions
           
       - run: echo ${{ steps.deploy.outputs }}
